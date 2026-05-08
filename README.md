@@ -1,26 +1,34 @@
-# AETHEL
+> Official release page for AETHEL — a lightweight support and report desk built for modern Paper/Spigot environments.
 
-Support & Report Desk  
-NathanFCS Studio
+# AETHEL v1.4.1
+by NathanFCS Studio
+
+AETHEL is a lightweight support and report desk for Paper/Spigot servers using Skript.
+
+Built for server teams that want a clean way to handle player questions and reports without relying on larger helpdesk plugins or unnecessary systems.
 
 ---
 
 ## Overview
 
-AETHEL is a lightweight support and report system for Minecraft servers.
+AETHEL focuses on two core systems:
 
-Players submit questions through `/ask` and report suspicious players through `/report`.  
-Staff handle active questions through a simple queue. Reports are stored separately for review.
+- Ask ticket queue
+- Player report list
 
-Built to stay clean, practical, and easy to use.
+Questions are handled through a simple ticket flow:
+players submit a question, staff claim it, reply, and the ticket closes automatically.
+
+Reports are stored separately in a dedicated report list for staff review.
+
+This project is designed for server owners who want a practical internal support system that stays lightweight and easy to maintain.
 
 ---
 
-## Compatibility
+## Requirements
 
-- Minecraft Java Edition: 1.19.x – 1.21.11
-- Paper / Spigot 1.19+
-- Skript 2.8+
+- Paper or Spigot **1.19+**
+- Skript **2.8+**
 
 Bedrock players are supported through Geyser / Floodgate.
 
@@ -28,27 +36,17 @@ Bedrock players are supported through Geyser / Floodgate.
 
 ## Installation
 
-1. Place `aethel.sk` inside `plugins/Skript/scripts/`
+1. Place `aethel.sk` in `plugins/Skript/scripts/`
 2. Run `/sk reload aethel`
-3. Assign `aethel.team` to your staff and helper groups
-
----
-
-## Permission
-
-`aethel.team` — Grants access to all staff commands.
+3. Done
 
 ---
 
 ## Commands
 
-### Player
-| Command | Description |
-|---|---|
-| `/ask <message>` | Submit a question to the staff team |
-| `/report <player> <reason>` | Report a player |
+### Staff Only
+Permission node: `aethel.team`
 
-### Staff
 | Command | Description |
 |---|---|
 | `/ae queue` | View active ask tickets |
@@ -56,47 +54,45 @@ Bedrock players are supported through Geyser / Floodgate.
 | `/ae reply <id> <message>` | Reply to a ticket and close it |
 | `/ae info <id>` | View ticket details |
 | `/ae report list` | View active reports |
-
-### General
-| Command | Description |
-|---|---|
 | `/ae help` | View command list |
 | `/ae credits` | View credits |
 
-`/aethel` is an alias for `/ae`
+Alias: `/aethel`
+
+### All Players
+
+| Command | Description |
+|---|---|
+| `/ask <message>` | Submit a question to the staff team |
+| `/report <player> <reason>` | Report a player |
 
 ---
 
-## How It Works
+## Ask Ticket System
 
-### Ask Tickets
-- Players submit a question with `/ask <message>`
-- Staff view open asks through `/ae queue`
-- A ticket must be claimed before it can be answered
-- Replying with `/ae reply` automatically closes the ticket
-- Players cannot open a second ask while one is still active
-- If the player goes offline, the ticket is closed automatically
+- Players can only keep **one active ask** at a time
+- Staff must **claim** a ticket before replying
+- Replying to a ticket **closes it automatically**
+- Ask tickets close automatically if the **player goes offline**
+- If the handling staff member disconnects, the **claim is released**
 
-### Reports
-- Players report others with `/report <player> <reason>`
-- Multiple reports against the same target are merged into one entry
+---
+
+## Report System
+
+- Reports against the same target are **merged into one entry**
 - Staff review reports through `/ae report list`
-- Reports expire automatically after 30 minutes
+- Reports are **read-only** and handled separately from ask tickets
+- Reports **expire automatically** after the configured report lifetime
 
 ---
 
-## Features
+## Cooldowns
 
-- Separate ask and report handling
-- Claim system prevents two staff from handling the same ticket
-- Reply automatically closes the ticket
-- Ticket auto-closes if the asking player leaves the server
-- Duplicate report merging
-- Staff notification sound on every new ticket
-- All tickets reset on server restart
-- Cooldowns:
-  - `/ask` → 20 seconds
-  - `/report` → 60 seconds
+| Command | Cooldown |
+|---|---|
+| `/ask` | 20 seconds |
+| `/report` | 60 seconds |
 
 ---
 
@@ -114,26 +110,88 @@ options:
     ver: 1.4.1
 ```
 
+## Changelog
+
+```text
+v1.0 - initial release
+     - /ask and /report system
+     - basic staff notification with sound
+     - unified ticket queue
+     - /ae help and /ae credits
+
+v1.1 - feature update
+     - auto-close tickets after 24h of inactivity
+     - /ae info <id> command
+     - clickable text in queue
+
+v1.2 - visual update
+     - gold accent prefix and styling
+     - cleaner message formatting
+     - minor bug fixes
+
+v1.3 - bug fix release
+     - fixed /report not functioning
+     - fixed /ae reply always showing recipient offline
+     - fixed /ae queue not displaying ticket details
+     - fixed players being able to submit multiple asks
+     - fixed claim overlap between staff members
+
+v1.4 - system rework
+     - separated ask and report handling
+     - added /ae report list
+     - removed /ae close, reply now auto-closes tickets
+     - ask tickets auto-close when player goes offline
+     - claim automatically released when staff disconnects
+
+v1.4.1 - stability update
+       - all tickets reset on server restart
+       - UUID-based player and staff tracking
+       - minor stability improvements
+```
+---
+
+## Planned
+
+- [ ] Optional persistent storage
+- [ ] Optional Discord webhook logging
+- [ ] Optional report detail expansion
+- [ ] Additional staff-facing quality of life improvements
+
 ---
 
 ## License
-MIT License
 
-Copyright (c) 2026 NathanFCS Studio
+This project is licensed under the MIT License.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, subject to the following conditions:
+---
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+## Notes
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+- This is a Skript resource, not a standalone .jar plugin
+- Designed for Paper/Spigot-based servers
+- Lightweight and easy to maintain
+- Official links are provided below for safety and authenticity
+
+---
+
+## Official Links
+
+### Profiles
+- **GitHub:** https://github.com/OwenCloude
+- **SpigotMC Profile:** https://www.spigotmc.org/members/nathanfcs.2521802/
+- **skUnity Profile:** https://forums.skunity.com/members/nathanfcs.40131/
+- **Modrinth Profile:** https://modrinth.com/user/NTHFCS
+
+### Resource Pages
+- **SpigotMC:** https://www.spigotmc.org/resources/aethel.134969/
+- **skUnity:** Coming Soon
+
+### Community
+- **Discord:** https://discord.gg/V8dpGdsMeT
+
+---
+
+## Maintained By
+
+**NathanFCS Studio**  
+Releases • Support • Product Development
