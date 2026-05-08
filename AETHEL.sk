@@ -1,0 +1,477 @@
+# ==================================================
+# AETHEL v1.4.1
+# Support & Report Desk
+# NathanFCS Studio
+# Minecraft Java Edition 1.19.x - 1.21.11
+# Bedrock clients supported via Geyser / Floodgate
+# ==================================================
+
+options:
+    p: &6AETHEL &8• &7
+    l: &8&m----------------------------------------
+    perm: aethel.team
+    askcd: 20 seconds
+    reportcd: 60 seconds
+    reportttl: 30 minutes
+    snd: entity.experience_orb.pickup
+    ver: 1.4.1
+
+on load:
+    delete {ae.t::*}
+    delete {ae.cd::*}
+    delete {ae.id}
+    set {ae.id} to 0
+
+function aeAlert(msg: text):
+    loop all players:
+        if loop-player has permission "{@perm}":
+            send "{@p}%{_msg}%" to loop-player
+            play sound "{@snd}" with volume 0.6 and pitch 1.35 to loop-player
+
+function aeNotice(msg: text):
+    loop all players:
+        if loop-player has permission "{@perm}":
+            send "{@p}%{_msg}%" to loop-player
+
+function aeOnline(uid: text) :: boolean:
+    loop all players:
+        if "%uuid of loop-player%" is {_uid}:
+            return true
+    return false
+
+function aeOpenAsk(uid: text) :: number:
+    loop all integers from 1 to {ae.id}:
+        if {ae.t.%loop-value%.type} is "ASK":
+            if {ae.t.%loop-value%.open} is true:
+                if {ae.t.%loop-value%.from-id} is {_uid}:
+                    return loop-value
+    return 0
+
+function aeHeld(uid: text) :: number:
+    loop all integers from 1 to {ae.id}:
+        if {ae.t.%loop-value%.type} is "ASK":
+            if {ae.t.%loop-value%.open} is true:
+                if {ae.t.%loop-value%.staff-id} is {_uid}:
+                    return loop-value
+    return 0
+
+function aeCloseAsk(id: number, who: text):
+    set {ae.t.%{_id}%.open} to false
+    set {ae.t.%{_id}%.closedby} to {_who}
+    set {ae.t.%{_id}%.closedat} to now
+
+function aeHelp(p: player):
+    send "{@l}" to {_p}
+    send "&6&lAETHEL" to {_p}
+    send "&7Support &8• &7Report Desk" to {_p}
+    send "" to {_p}
+    send "&6Player Commands" to {_p}
+    send "&f/ask <message> &8- &7Submit a question" to {_p}
+    send "&f/report <player> <reason> &8- &7Report a player" to {_p}
+    send "" to {_p}
+    if {_p} has permission "{@perm}":
+        send "&6Staff Commands" to {_p}
+        send "&f/ae queue &8- &7View active asks" to {_p}
+        send "&f/ae claim <id> &8- &7Claim a ticket" to {_p}
+        send "&f/ae reply <id> <message> &8- &7Reply and close" to {_p}
+        send "&f/ae info <id> &8- &7View ticket details" to {_p}
+        send "&f/ae report list &8- &7View active reports" to {_p}
+        send "" to {_p}
+    send "&6Information" to {_p}
+    send "&f/ae help &8- &7View this page" to {_p}
+    send "&f/ae credits &8- &7View credits" to {_p}
+    send "{@l}" to {_p}
+
+function aeCredits(p: player):
+    send "{@l}" to {_p}
+    send "&6&lAETHEL" to {_p}
+    send "&7Support &8• &7Report Desk" to {_p}
+    send "" to {_p}
+    send "&7Version: &f{@ver}" to {_p}
+    send "&7Designed and developed by" to {_p}
+    send "&6NathanFCS Studio" to {_p}
+    send "{@l}" to {_p}
+
+on quit:
+    set {_uid} to "%uuid of player%"
+
+    loop all integers from 1 to {ae.id}:
+        set {_id} to loop-value
+
+        if {ae.t.%{_id}%.type} is "ASK":
+            if {ae.t.%{_id}%.open} is true:
+                if {ae.t.%{_id}%.from-id} is {_uid}:
+                    aeCloseAsk({_id}, "SYSTEM")
+                    aeNotice("Ticket &6#%{_id}% &7closed automatically. The player left the server.")
+                else if {ae.t.%{_id}%.staff-id} is {_uid}:
+                    delete {ae.t.%{_id}%.staff}
+                    delete {ae.t.%{_id}%.staff-id}
+                    aeNotice("Claim on ticket &6#%{_id}% &7was released.")
+
+every 5 minutes:
+    loop all integers from 1 to {ae.id}:
+        set {_id} to loop-value
+
+        if {ae.t.%{_id}%.open} is true:
+            if {ae.t.%{_id}%.type} is "ASK":
+                if aeOnline({ae.t.%{_id}%.from-id}) is false:
+                    aeCloseAsk({_id}, "SYSTEM")
+                    aeNotice("Ticket &6#%{_id}% &7closed automatically. The player is offline.")
+                else:
+                    set {_age} to difference between {ae.t.%{_id}%.at} and now
+                    if {ae.t.%{_id}%.staff-id} is not set:
+                        if {_age} > 24 hours:
+                            aeCloseAsk({_id}, "SYSTEM")
+                            aeNotice("Ticket &6#%{_id}% &7auto-closed after 24h of inactivity.")
+
+            else if {ae.t.%{_id}%.type} is "REPORT":
+                set {_age} to difference between {ae.t.%{_id}%.at} and now
+                if {_age} > {@reportttl}:
+                    set {ae.t.%{_id}%.open} to false
+                    set {ae.t.%{_id}%.closedby} to "SYSTEM"
+                    set {ae.t.%{_id}%.closedat} to now
+
+command /ask <text>:
+    trigger:
+        if {ae.cd.ask.%uuid of player%} is set:
+            set {_elapsed} to difference between {ae.cd.ask.%uuid of player%} and now
+            if {_elapsed} < {@askcd}:
+                send "{@p}Please wait before asking again." to player
+                stop
+
+        set {_open} to aeOpenAsk("%uuid of player%")
+        if {_open} is not 0:
+            send "{@p}You already have an open question. Reference &6#%{_open}%&7." to player
+            stop
+
+        set {ae.cd.ask.%uuid of player%} to now
+        add 1 to {ae.id}
+        set {_id} to {ae.id}
+
+        set {ae.t.%{_id}%.type} to "ASK"
+        set {ae.t.%{_id}%.from} to name of player
+        set {ae.t.%{_id}%.from-id} to "%uuid of player%"
+        set {ae.t.%{_id}%.msg} to arg-1
+        set {ae.t.%{_id}%.at} to now
+        set {ae.t.%{_id}%.open} to true
+
+        send "{@p}Question submitted. Reference &6#%{_id}%&7." to player
+        aeAlert("&eNew ask &8• &7Reference &6#%{_id}% &8• &7From &f%name of player%")
+
+command /report <player> <text>:
+    trigger:
+        if arg-1 is player:
+            send "{@p}You cannot report yourself." to player
+            stop
+
+        if {ae.cd.report.%uuid of player%} is set:
+            set {_elapsed} to difference between {ae.cd.report.%uuid of player%} and now
+            if {_elapsed} < {@reportcd}:
+                send "{@p}Please wait before reporting again." to player
+                stop
+
+        set {_targetName} to name of arg-1
+        set {_targetId} to "%uuid of arg-1%"
+        delete {_merge}
+
+        loop all integers from 1 to {ae.id}:
+            set {_id} to loop-value
+            if {ae.t.%{_id}%.type} is "REPORT":
+                if {ae.t.%{_id}%.open} is true:
+                    if {ae.t.%{_id}%.target-id} is {_targetId}:
+                        set {_merge} to {_id}
+
+        if {_merge} is set:
+            if "%uuid of player%" is in {ae.t.%{_merge}%.rpu::*}:
+                send "{@p}You already have an active report against &f%{_targetName}%&7." to player
+                stop
+
+            set {ae.cd.report.%uuid of player%} to now
+            add "%uuid of player%" to {ae.t.%{_merge}%.rpu::*}
+            add name of player to {ae.t.%{_merge}%.rpn::*}
+            add arg-2 to {ae.t.%{_merge}%.rs::*}
+
+            set {_count} to size of {ae.t.%{_merge}%.rpu::*}
+            send "{@p}Report submitted. Reference &6#%{_merge}%&7." to player
+            aeAlert("&cReport &8• &7Reference &6#%{_merge}% &8• &7Target &f%{_targetName}% &8• &f%{_count}% &7reporter(s)")
+            stop
+
+        set {ae.cd.report.%uuid of player%} to now
+        add 1 to {ae.id}
+        set {_id} to {ae.id}
+
+        set {ae.t.%{_id}%.type} to "REPORT"
+        set {ae.t.%{_id}%.target} to {_targetName}
+        set {ae.t.%{_id}%.target-id} to {_targetId}
+        set {ae.t.%{_id}%.reason} to arg-2
+        set {ae.t.%{_id}%.at} to now
+        set {ae.t.%{_id}%.open} to true
+        add "%uuid of player%" to {ae.t.%{_id}%.rpu::*}
+        add name of player to {ae.t.%{_id}%.rpn::*}
+        add arg-2 to {ae.t.%{_id}%.rs::*}
+
+        send "{@p}Report submitted. Reference &6#%{_id}%&7." to player
+        aeAlert("&cNew report &8• &7Reference &6#%{_id}% &8• &7Target &f%{_targetName}%")
+
+command /ae [<text>] [<text>] [<text>]:
+    aliases: aethel
+    trigger:
+        if arg-1 is not set:
+            aeHelp(player)
+            stop
+
+        set {_sub} to arg-1 in lower case
+
+        if {_sub} is "help":
+            aeHelp(player)
+            stop
+
+        if {_sub} is "credits":
+            aeCredits(player)
+            stop
+
+        if player does not have permission "{@perm}":
+            send "{@p}You don't have access." to player
+            stop
+
+        if {_sub} is "queue":
+            set {_count} to 0
+            loop all integers from 1 to {ae.id}:
+                if {ae.t.%loop-value%.type} is "ASK":
+                    if {ae.t.%loop-value%.open} is true:
+                        add 1 to {_count}
+
+            send "{@l}" to player
+            send "&6&lAETHEL" to player
+            send "&7Active Asks: &f%{_count}%" to player
+            send "" to player
+
+            if {_count} is 0:
+                send "&7No active asks." to player
+                send "{@l}" to player
+                stop
+
+            loop all integers from 1 to {ae.id}:
+                set {_id} to loop-value
+                if {ae.t.%{_id}%.type} is "ASK":
+                    if {ae.t.%{_id}%.open} is true:
+                        set {_age} to difference between {ae.t.%{_id}%.at} and now
+                        send "&8#&6%{_id}% &8• &6ASK &8• &f%{ae.t.%{_id}%.from}% &8• &7%{_age}% ago" to player
+                        send "  &7%{ae.t.%{_id}%.msg}%" to player
+                        if {ae.t.%{_id}%.staff} is set:
+                            send "  &7Claimed by: &f%{ae.t.%{_id}%.staff}%" to player
+                        else:
+                            send "  &7Claimed by: &8-" to player
+                        send "" to player
+
+            send "{@l}" to player
+            stop
+
+        if {_sub} is "reports":
+            set {_count} to 0
+            loop all integers from 1 to {ae.id}:
+                if {ae.t.%loop-value%.type} is "REPORT":
+                    if {ae.t.%loop-value%.open} is true:
+                        add 1 to {_count}
+
+            send "{@l}" to player
+            send "&6&lAETHEL" to player
+            send "&7Active Reports: &f%{_count}%" to player
+            send "" to player
+
+            if {_count} is 0:
+                send "&7No active reports." to player
+                send "{@l}" to player
+                stop
+
+            loop all integers from 1 to {ae.id}:
+                set {_id} to loop-value
+                if {ae.t.%{_id}%.type} is "REPORT":
+                    if {ae.t.%{_id}%.open} is true:
+                        set {_age} to difference between {ae.t.%{_id}%.at} and now
+                        set {_rc} to size of {ae.t.%{_id}%.rpu::*}
+                        send "&8#&6%{_id}% &8• &cREPORT &8• &f%{ae.t.%{_id}%.target}% &8• &f%{_rc}% &7reporter(s) &8• &7%{_age}% ago" to player
+                        send "  &7%{ae.t.%{_id}%.reason}%" to player
+                        send "" to player
+
+            send "{@l}" to player
+            stop
+
+        if {_sub} is "report":
+            if arg-2 is set:
+                set {_sub2} to arg-2 in lower case
+                if {_sub2} is "list":
+                    execute player command "ae reports"
+                    stop
+            send "{@p}Usage: &f/ae report list" to player
+            stop
+
+        if {_sub} is "info":
+            if arg-2 is not set:
+                send "{@p}Usage: &f/ae info <id>" to player
+                stop
+
+            set {_id} to arg-2 parsed as integer
+            if {_id} is not set:
+                send "{@p}Invalid ID." to player
+                stop
+
+            if {ae.t.%{_id}%.type} is not set:
+                send "{@p}Ticket not found." to player
+                stop
+
+            send "{@l}" to player
+            send "&6&lAETHEL" to player
+            send "" to player
+            send "&7Ticket: &6#%{_id}% &8• &f%{ae.t.%{_id}%.type}%" to player
+            send "" to player
+
+            if {ae.t.%{_id}%.type} is "ASK":
+                send "&7From: &f%{ae.t.%{_id}%.from}%" to player
+                send "&7Message: &f%{ae.t.%{_id}%.msg}%" to player
+            else:
+                send "&7Target: &f%{ae.t.%{_id}%.target}%" to player
+                send "&7Reason: &f%{ae.t.%{_id}%.reason}%" to player
+
+                set {_rlist} to ""
+                loop {ae.t.%{_id}%.rpn::*}:
+                    if {_rlist} is "":
+                        set {_rlist} to loop-value
+                    else:
+                        set {_rlist} to "%{_rlist}%, %loop-value%"
+
+                if {_rlist} is "":
+                    set {_rlist} to "-"
+
+                send "&7Reporters: &f%{_rlist}%" to player
+
+            set {_age} to difference between {ae.t.%{_id}%.at} and now
+            send "&7Created: &f%{_age}% ago" to player
+
+            if {ae.t.%{_id}%.open} is true:
+                send "&7Status: &aOPEN" to player
+            else:
+                send "&7Status: &8CLOSED" to player
+
+            if {ae.t.%{_id}%.type} is "ASK":
+                if {ae.t.%{_id}%.staff} is set:
+                    send "&7Claimed by: &f%{ae.t.%{_id}%.staff}%" to player
+                else:
+                    send "&7Claimed by: &8-" to player
+
+            if {ae.t.%{_id}%.open} is not true:
+                if {ae.t.%{_id}%.closedby} is set:
+                    send "&7Closed by: &f%{ae.t.%{_id}%.closedby}%" to player
+                if {ae.t.%{_id}%.closedat} is set:
+                    set {_closedAge} to difference between {ae.t.%{_id}%.closedat} and now
+                    send "&7Closed: &f%{_closedAge}% ago" to player
+
+            send "{@l}" to player
+            stop
+
+        if {_sub} is "claim":
+            if arg-2 is not set:
+                send "{@p}Usage: &f/ae claim <id>" to player
+                stop
+
+            set {_id} to arg-2 parsed as integer
+            if {_id} is not set:
+                send "{@p}Invalid ID." to player
+                stop
+
+            if {ae.t.%{_id}%.type} is not set:
+                send "{@p}Ticket not found." to player
+                stop
+
+            if {ae.t.%{_id}%.type} is not "ASK":
+                send "{@p}Report tickets are read-only. Use &f/ae report list&7." to player
+                stop
+
+            if {ae.t.%{_id}%.open} is not true:
+                send "{@p}Ticket is not active." to player
+                stop
+
+            if aeOnline({ae.t.%{_id}%.from-id}) is false:
+                aeCloseAsk({_id}, "SYSTEM")
+                send "{@p}That ticket was closed because the player is offline." to player
+                stop
+
+            if {ae.t.%{_id}%.staff-id} is set:
+                if {ae.t.%{_id}%.staff-id} is "%uuid of player%":
+                    send "{@p}You already claimed ticket &6#%{_id}%&7." to player
+                    stop
+                send "{@p}Already claimed by &f%{ae.t.%{_id}%.staff}%&7." to player
+                stop
+
+            set {_held} to aeHeld("%uuid of player%")
+            if {_held} is not 0:
+                if {_held} is not {_id}:
+                    send "{@p}You already have an active claim on &6#%{_held}%&7." to player
+                    stop
+
+            set {ae.t.%{_id}%.staff} to name of player
+            set {ae.t.%{_id}%.staff-id} to "%uuid of player%"
+            aeNotice("Ticket &6#%{_id}% &7claimed by &f%name of player%&7.")
+            stop
+
+        if {_sub} is "reply":
+            if arg-2 is not set:
+                send "{@p}Usage: &f/ae reply <id> <message>" to player
+                stop
+
+            if arg-3 is not set:
+                send "{@p}Usage: &f/ae reply <id> <message>" to player
+                stop
+
+            set {_id} to arg-2 parsed as integer
+            if {_id} is not set:
+                send "{@p}Invalid ID." to player
+                stop
+
+            if {ae.t.%{_id}%.type} is not set:
+                send "{@p}Ticket not found." to player
+                stop
+
+            if {ae.t.%{_id}%.type} is not "ASK":
+                send "{@p}Reports cannot be replied to." to player
+                stop
+
+            if {ae.t.%{_id}%.open} is not true:
+                send "{@p}Ticket is not active." to player
+                stop
+
+            if {ae.t.%{_id}%.staff-id} is not set:
+                send "{@p}Claim the ticket first with &f/ae claim %{_id}%&7." to player
+                stop
+
+            if {ae.t.%{_id}%.staff-id} is not "%uuid of player%":
+                send "{@p}Claimed by &f%{ae.t.%{_id}%.staff}%&7." to player
+                stop
+
+            if aeOnline({ae.t.%{_id}%.from-id}) is false:
+                aeCloseAsk({_id}, "SYSTEM")
+                send "{@p}Ticket &6#%{_id}% &7was closed because the player is offline." to player
+                stop
+
+            set {_sent} to 0
+            loop all players:
+                if "%uuid of loop-player%" is {ae.t.%{_id}%.from-id}:
+                    send "{@l}" to loop-player
+                    send "&6&lAETHEL" to loop-player
+                    send "&7Reply to ticket &6#%{_id}%" to loop-player
+                    send "&7From: &f%name of player%" to loop-player
+                    send "&7Message: &f%arg-3%" to loop-player
+                    send "{@l}" to loop-player
+                    add 1 to {_sent}
+
+            if {_sent} is 0:
+                aeCloseAsk({_id}, "SYSTEM")
+                send "{@p}Ticket &6#%{_id}% &7was closed because the player is offline." to player
+                stop
+
+            aeCloseAsk({_id}, name of player)
+            send "{@p}Reply sent. Ticket &6#%{_id}% &7has been closed." to player
+            aeNotice("Ticket &6#%{_id}% &7resolved by &f%name of player%&7.")
+            stop
+
+        send "{@p}Unknown command. Use &f/ae help&7."
