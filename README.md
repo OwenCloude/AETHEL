@@ -184,7 +184,7 @@ This project is licensed under the MIT License.
 
 ### Resource Pages
 - **SpigotMC:** https://www.spigotmc.org/resources/aethel.134969/
-- **skUnity:** Coming Soon
+- **skUnity:** https://forums.skunity.com/resources/aethel.1888/
 
 ### Community
 - **Discord:** https://discord.gg/V8dpGdsMeT
